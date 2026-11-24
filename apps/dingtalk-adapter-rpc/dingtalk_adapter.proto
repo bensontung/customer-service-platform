@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package dingtalkadapter.v1;
+
+option go_package = "github.com/example/customer-service-platform/apps/dingtalk-adapter-rpc/pb";
+
+message SendNotificationRequest {
+  string agent_id = 1;
+  string conversation_id = 2;
+  string kind = 3;
+  string title = 4;
+  string text = 5;
+  string url = 6;
+}
+
+message SendNotificationResponse {
+  string notification_id = 1;
+}
+
+message ExchangeLoginCodeRequest {
+  string code = 1;
+  string corp_id = 2;
+}
+
+message ExchangeLoginCodeResponse {
+  string ding_talk_user_id = 1;
+}
+
+service DingtalkAdapterService {
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc ExchangeLoginCode(ExchangeLoginCodeRequest) returns (ExchangeLoginCodeResponse);
+}

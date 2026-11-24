@@ -1,0 +1,7 @@
+syntax = "v1"
+
+info(
+	title: "WeChat callback contract"
+	desc: "GET/POST /callbacks/wechat/{accountKey}. GET uses signature,timestamp,nonce and returns raw echostr. POST accepts XML or JSON; plaintext uses signature and secure mode uses msg_signature. Successful durable persistence returns raw success. Authentication, persistence or temporary failures never return a success ACK. Handlers are implemented in pkg/wechat/callback because goctl response envelopes are not compatible with the WeChat raw protocol."
+	version: "v1"
+)

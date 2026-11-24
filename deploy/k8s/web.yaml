@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: web-console}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: web-console}}
+  template:
+    metadata: {labels: {app: web-console}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: web-console
+          image: customer-service-web:replace-me
+          ports: [{containerPort: 8080}]
+          resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 500m, memory: 256Mi}}
+          readinessProbe: {httpGet: {path: /, port: 8080}}
+          livenessProbe: {httpGet: {path: /, port: 8080}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: cache, mountPath: /var/cache/nginx}
+            - {name: run, mountPath: /var/run}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: cache, emptyDir: {}}
+        - {name: run, emptyDir: {}}
+        - {name: tmp, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: web-console}
+spec:
+  selector: {app: web-console}
+  ports: [{port: 80, targetPort: 8080}]

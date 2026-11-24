@@ -1,0 +1,180 @@
+name: customer-service
+
+x-app-environment: &app-environment
+  APP_ENV: production
+  MYSQL_DSN: ${LOCAL_MYSQL_DSN:?Set the production application DSN}
+  REDIS_ADDR: redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Set the production Redis password}
+  AMQP_URL: ${LOCAL_AMQP_URL:?Set the production AMQP URL}
+  CONSOLE_BASE_URL: ${CONSOLE_BASE_URL:?Set the public HTTPS console URL}
+  SESSION_SECRET: ${SESSION_SECRET:?Set a random secret of at least 32 bytes}
+  DINGTALK_APP_KEY: ${DINGTALK_APP_KEY:-}
+  DINGTALK_APP_SECRET: ${DINGTALK_APP_SECRET:-}
+  DINGTALK_CARD_API_SECRET: ${DINGTALK_CARD_API_SECRET:-}
+  DINGTALK_CARD_TEMPLATE_ID: ${DINGTALK_CARD_TEMPLATE_ID:-}
+  DINGTALK_CALLBACK_ROUTE_KEY: ${DINGTALK_CALLBACK_ROUTE_KEY:-}
+  DINGTALK_CALLBACK_TOKEN: ${DINGTALK_CALLBACK_TOKEN:-}
+  DINGTALK_CALLBACK_AES_KEY: ${DINGTALK_CALLBACK_AES_KEY:-}
+  DINGTALK_CORP_ID: ${DINGTALK_CORP_ID:-}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  WECHAT_COMMENT_SOURCES_JSON: ${WECHAT_COMMENT_SOURCES_JSON:-[]}
+  OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:?Set the internal storage endpoint}
+  OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:?Set the public HTTPS storage origin}
+  OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-customer-service}
+  OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:?Set the storage access key}
+  OBJECT_STORAGE_SECRET_KEY: ${MINIO_APP_PASSWORD:?Set the MinIO application password}
+  WECHAT_SERVICE_TOKEN: ${WECHAT_SERVICE_TOKEN:-}
+  WECHAT_SERVICE_AES_KEY: ${WECHAT_SERVICE_AES_KEY:-}
+  WECHAT_SERVICE_APP_SECRET: ${WECHAT_SERVICE_APP_SECRET:-}
+  WECHAT_MINIAPP_TOKEN: ${WECHAT_MINIAPP_TOKEN:-}
+  WECHAT_MINIAPP_AES_KEY: ${WECHAT_MINIAPP_AES_KEY:-}
+  WECHAT_MINIAPP_APP_SECRET: ${WECHAT_MINIAPP_APP_SECRET:-}
+
+services:
+  mysql:
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set the production database root password}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Set the production application database password}
+    ports: !override ["127.0.0.1:3306:3306"]
+    expose: ["3306"]
+    volumes: ["/srv/customer-service/mysql:/var/lib/mysql"]
+    command: ["mysqld", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports: !override []
+    expose: ["6379"]
+    command: ["/bin/sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    volumes: ["/srv/customer-service/redis:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  rabbitmq:
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set the production RabbitMQ password}
+    ports: !override []
+    expose: ["5672"]
+    volumes: ["/srv/customer-service/rabbitmq:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  minio:
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set the production MinIO root user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set the production MinIO root password}
+    ports: !override
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes: ["/srv/customer-service/minio:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  minio-init:
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${OBJECT_STORAGE_BUCKET}"
+        mc anonymous set none "local/$${OBJECT_STORAGE_BUCKET}"
+        mc admin user add local "$${OBJECT_STORAGE_ACCESS_KEY}" "$${MINIO_APP_PASSWORD}"
+        mc admin policy create local customer-service-media /etc/customer-service/minio-policy.json
+        mc admin policy attach local customer-service-media --user "$${OBJECT_STORAGE_ACCESS_KEY}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-customer-service}
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
+      MINIO_APP_PASSWORD: ${MINIO_APP_PASSWORD:?Set the MinIO application password}
+    volumes:
+      - /opt/customer-service/deploy/minio-policy.json:/etc/customer-service/minio-policy.json:ro
+    depends_on:
+      minio: {condition: service_healthy}
+
+  migrate:
+    image: customer-service-migrate:${RELEASE_TAG:-local}
+    environment:
+      MYSQL_DSN: ${LOCAL_MYSQL_DSN}
+
+  console-api:
+    image: customer-service-console:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    environment: *app-environment
+    ports: !override ["127.0.0.1:8080:8080"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      minio-init: {condition: service_completed_successfully}
+      migrate: {condition: service_completed_successfully}
+
+  ingress:
+    image: customer-service-ingress:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    environment: *app-environment
+    ports: !override ["127.0.0.1:8081:8081"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+
+  scheduler:
+    image: customer-service-scheduler:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    environment: *app-environment
+    expose: ["8082"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      minio-init: {condition: service_completed_successfully}
+      migrate: {condition: service_completed_successfully}
+
+  web:
+    image: customer-service-web:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    ports: !override []
+    expose: ["8080"]
+    volumes: !override []
+    depends_on: [console-api]
+
+  gateway:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    environment:
+      WEB_STORAGE_ENDPOINT: ${WEB_STORAGE_ENDPOINT:?Set the internal storage endpoint used by the browser upload proxy}
+      CONSOLE_BASE_URL: ${CONSOLE_BASE_URL}
+    ports: ["127.0.0.1:8088:80"]
+    volumes:
+      - /opt/customer-service/deploy/nginx-gateway.conf.template:/etc/nginx/templates/default.conf.template:ro
+    read_only: true
+    tmpfs: ["/var/cache/nginx", "/var/run", "/tmp"]
+    depends_on: [web, minio]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mysql_data:
+  minio_data:

@@ -1,0 +1,15 @@
+Name: console-api
+Host: 0.0.0.0
+Port: 8080
+Timeout: 10000
+MaxConns: 500
+Auth:
+  AccessSecret: ${SESSION_SECRET}
+  AccessExpire: 900
+Log:
+  Mode: console
+  Encoding: json
+Telemetry:
+  Name: console-api
+  Endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  Sampler: 1.0

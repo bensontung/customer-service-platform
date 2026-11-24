@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ticket.v1;
+
+option go_package = "github.com/example/customer-service-platform/apps/ticket-rpc/pb";
+
+import "google/protobuf/timestamp.proto";
+
+message Ticket {
+  string id = 1;
+  string customer_id = 2;
+  string conversation_id = 3;
+  string comment_id = 4;
+  string title = 5;
+  string description = 6;
+  string status = 7;
+  string priority = 8;
+  string assignee_id = 9;
+  google.protobuf.Timestamp due_at = 10;
+  int64 version = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message CreateTicketRequest {
+  string customer_id = 1;
+  string conversation_id = 2;
+  string comment_id = 3;
+  string title = 4;
+  string description = 5;
+  string priority = 6;
+  string assignee_id = 7;
+  google.protobuf.Timestamp due_at = 8;
+}
+
+message UpdateTicketRequest {
+  string id = 1;
+  string status = 2;
+  string priority = 3;
+  string assignee_id = 4;
+  google.protobuf.Timestamp due_at = 5;
+  bool clear_due_at = 6;
+  int64 expected_version = 7;
+}
+
+message GetTicketRequest {
+  string id = 1;
+}
+
+service TicketService {
+  rpc CreateTicket(CreateTicketRequest) returns (Ticket);
+  rpc UpdateTicket(UpdateTicketRequest) returns (Ticket);
+  rpc GetTicket(GetTicketRequest) returns (Ticket);
+}

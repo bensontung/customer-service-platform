@@ -1,0 +1,2 @@
+Name: wechatadapter.rpc
+ListenOn: ${WECHAT_ADAPTER_RPC_LISTEN_ON}

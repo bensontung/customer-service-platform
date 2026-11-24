@@ -1,0 +1,74 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: console-api}
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: console-api}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: wechat-ingress-api}
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: wechat-ingress-api}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: customer-service-default-deny}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: customer-service-allow}
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [console-api, wechat-ingress-api, scheduler-job, web-console, customer-service-migrate, conversation-rpc, customer-rpc, ticket-rpc, wechat-adapter-rpc, dingtalk-adapter-rpc]}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app, operator: In, values: [console-api, scheduler-job, web-console, conversation-rpc, customer-rpc, ticket-rpc, wechat-adapter-rpc, dingtalk-adapter-rpc]}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+      ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+    - ports:
+        - {port: 3306, protocol: TCP}
+        - {port: 6379, protocol: TCP}
+        - {port: 5672, protocol: TCP}
+        - {port: 443, protocol: TCP}
+        - {port: 8080, protocol: TCP}
+        - {port: 8081, protocol: TCP}
+        - {port: 8082, protocol: TCP}
+        - {port: 9101, protocol: TCP}
+        - {port: 9102, protocol: TCP}
+        - {port: 9103, protocol: TCP}
+        - {port: 9104, protocol: TCP}
+        - {port: 9105, protocol: TCP}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: customer-service-migrate}
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels: {app: customer-service-migrate}
+    spec:
+      restartPolicy: Never
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: migrate
+          image: customer-service-migrate:replace-me
+          envFrom:
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {cpu: 500m, memory: 256Mi}}

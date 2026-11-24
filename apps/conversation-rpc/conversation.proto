@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package conversation.v1;
+
+option go_package = "github.com/example/customer-service-platform/apps/conversation-rpc/pb";
+
+import "google/protobuf/timestamp.proto";
+
+message Conversation {
+  string id = 1;
+  string source = 2;
+  string channel_account_id = 3;
+  string customer_id = 4;
+  string status = 5;
+  string assignee_id = 6;
+  string team_id = 7;
+  int64 version = 8;
+  google.protobuf.Timestamp last_inbound_at = 9;
+  google.protobuf.Timestamp reply_deadline_at = 10;
+  int64 replies_in_window = 11;
+  google.protobuf.Timestamp first_response_at = 12;
+  google.protobuf.Timestamp sla_escalated_at = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+message GetConversationRequest {
+  string id = 1;
+}
+
+message ClaimConversationRequest {
+  string conversation_id = 1;
+  string agent_id = 2;
+  int64 expected_version = 3;
+}
+
+message CloseConversationRequest {
+  string conversation_id = 1;
+  string agent_id = 2;
+  int64 expected_version = 3;
+}
+
+message TransferConversationRequest {
+  string conversation_id = 1;
+  string actor_id = 2;
+  string assignee_id = 3;
+  string team_id = 4;
+  int64 expected_version = 5;
+}
+
+message QueueMessageRequest {
+  string conversation_id = 1;
+  string agent_id = 2;
+  string type = 3;
+  string text = 4;
+  string media_id = 5;
+  string idempotency_key = 6;
+}
+
+message QueueMessageResponse {
+  string message_id = 1;
+}
+
+service ConversationService {
+  rpc GetConversation(GetConversationRequest) returns (Conversation);
+  rpc ClaimConversation(ClaimConversationRequest) returns (Conversation);
+  rpc CloseConversation(CloseConversationRequest) returns (Conversation);
+  rpc TransferConversation(TransferConversationRequest) returns (Conversation);
+  rpc QueueMessage(QueueMessageRequest) returns (QueueMessageResponse);
+}

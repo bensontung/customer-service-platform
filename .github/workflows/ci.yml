@@ -1,0 +1,117 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version: "1.24.x", cache: true}
+      - run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
+      - run: goctl_version=v1.7.6; go install github.com/zeromicro/go-zero/tools/goctl@${goctl_version}
+      - run: make generate-check
+      - run: make test
+      - run: make lint
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: web-console}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20, cache: npm, cache-dependency-path: web-console/package-lock.json}
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+  infrastructure:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: customer_service_integration
+          MYSQL_USER: app
+          MYSQL_PASSWORD: local-development-only
+          MYSQL_ROOT_PASSWORD: local-development-only
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -plocal-development-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-retries=20
+      rabbitmq:
+        image: rabbitmq:4.1-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: app
+          RABBITMQ_DEFAULT_PASS: local-development-only
+        ports: ["5672:5672"]
+        options: --health-cmd="rabbitmq-diagnostics -q ping" --health-interval=5s --health-retries=30
+      minio:
+        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+        env:
+          MINIO_ROOT_USER: local-development
+          MINIO_ROOT_PASSWORD: local-development-only
+        ports: ["9000:9000"]
+        options: --health-cmd="mc ready local" --health-interval=5s --health-retries=30
+    env:
+      REQUIRE_INTEGRATION: "1"
+      TEST_MYSQL_DSN: app:local-development-only@tcp(127.0.0.1:3306)/customer_service_integration?charset=utf8mb4&parseTime=true&loc=UTC
+      TEST_REDIS_ADDR: 127.0.0.1:6379
+      TEST_AMQP_URL: amqp://app:local-development-only@127.0.0.1:5672/
+      TEST_OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
+      TEST_OBJECT_STORAGE_ACCESS_KEY: local-development
+      TEST_OBJECT_STORAGE_SECRET_KEY: local-development-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version: "1.24.x", cache: true}
+      - run: |
+          go run ./deploy/migrate -dir deploy/migrations
+          go run ./deploy/migrate -dir deploy/migrations
+        env:
+          MYSQL_DSN: ${{ env.TEST_MYSQL_DSN }}
+      - run: make test-integration
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: SESSION_SECRET=ci-placeholder-only-at-least-32-bytes LOCAL_MYSQL_DSN=ci-placeholder LOCAL_AMQP_URL=ci-placeholder docker compose -f deploy/docker-compose.yml config --quiet
+      - run: docker run --rm -v "$PWD:/workspace" -w /workspace registry.k8s.io/kustomize/kustomize:v5.6.0 build deploy/k8s > /dev/null
+      - run: |
+          touch /tmp/customer-service-ci.env
+          docker compose --env-file /tmp/customer-service-ci.env -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet
+        env:
+          LOCAL_MYSQL_DSN: ci-placeholder
+          MYSQL_ROOT_PASSWORD: ci-placeholder
+          MYSQL_APP_PASSWORD: ci-placeholder
+          REDIS_PASSWORD: ci-placeholder
+          LOCAL_AMQP_URL: ci-placeholder
+          RABBITMQ_PASSWORD: ci-placeholder
+          CONSOLE_BASE_URL: https://console.example.com
+          SESSION_SECRET: ci-placeholder-only-at-least-32-bytes
+          OBJECT_STORAGE_ENDPOINT: http://minio:9000
+          OBJECT_STORAGE_PUBLIC_ENDPOINT: https://storage.example.com
+          OBJECT_STORAGE_ACCESS_KEY: ci-placeholder
+          OBJECT_STORAGE_SECRET_KEY: ci-placeholder
+          WEB_STORAGE_ENDPOINT: http://minio:9000
+          MINIO_ROOT_USER: ci-placeholder
+          MINIO_ROOT_PASSWORD: ci-placeholder
+          MINIO_APP_PASSWORD: ci-placeholder
+          RELEASE_TAG: ci
+      - run: |
+          touch /tmp/customer-service-ci.env
+          docker compose --env-file /tmp/customer-service-ci.env -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --format json > /tmp/customer-service-ci.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/customer-service-ci.json') as f:
+              config = json.load(f)
+          for name, service in config['services'].items():
+              for port in service.get('ports', []):
+                  assert port.get('host_ip') == '127.0.0.1', (name, port)
+          assert config['services']['redis']['environment']['REDIS_PASSWORD']
+          for name in ('console-api', 'ingress', 'scheduler', 'web', 'migrate'):
+              assert config['services'][name]['image'].endswith(':ci')
+          PY

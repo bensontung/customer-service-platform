@@ -1,0 +1,317 @@
+syntax = "v1"
+
+type LoginRequest {
+	Code   string `json:"code"`
+	CorpId string `json:"corpId,optional"`
+}
+
+type SessionResponse {
+	Token   string `json:"token"`
+	AgentId string `json:"agentId"`
+	Role    string `json:"role"`
+	Name    string `json:"name"`
+}
+
+type MeResponse {
+	AgentId string `json:"agentId"`
+	Role    string `json:"role"`
+	Name    string `json:"name"`
+	OnShift bool   `json:"onShift"`
+}
+
+type ConversationQuery {
+	Status   string `form:"status,optional"`
+	Source   string `form:"source,optional"`
+	Assignee string `form:"assignee,optional"`
+}
+
+type ConversationView {
+	Id              string `json:"id"`
+	Source          string `json:"source"`
+	Channel         string `json:"channel"`
+	CustomerId      string `json:"customerId"`
+	Status          string `json:"status"`
+	AssigneeId      string `json:"assigneeId"`
+	LastInboundAt   string `json:"lastInboundAt"`
+	ReplyDeadlineAt string `json:"replyDeadlineAt"`
+	RepliesInWindow int    `json:"repliesInWindow"`
+}
+
+type MessageView {
+	Id           string `json:"id"`
+	Direction    string `json:"direction"`
+	Type         string `json:"type"`
+	Content      string `json:"content"`
+	Status       string `json:"status"`
+	ErrorMessage string `json:"errorMessage"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+type CustomerView {
+	Id       string   `json:"id"`
+	OpenId   string   `json:"openId"`
+	Nickname string   `json:"nickname"`
+	Note     string   `json:"note"`
+	Tags     []string `json:"tags"`
+}
+
+type ConversationDetail {
+	Conversation ConversationView `json:"conversation"`
+	Customer     CustomerView     `json:"customer"`
+	Messages     []MessageView    `json:"messages"`
+	Tickets      []TicketView     `json:"tickets"`
+}
+
+type ConversationListResponse {
+	Items []ConversationView `json:"items"`
+}
+
+type IdRequest {
+	Id string `path:"id"`
+}
+
+type IdResponse {
+	Id string `json:"id"`
+}
+
+type TransferRequest {
+	Id         string `path:"id"`
+	AssigneeId string `json:"assigneeId,optional"`
+	TeamId     string `json:"teamId,optional"`
+}
+
+type SendMessageRequest {
+	Id      string `path:"id"`
+	Type    string `json:"type"`
+	Text    string `json:"text,optional"`
+	MediaId string `json:"mediaId,optional"`
+}
+
+type CommentQuery {
+	AccountId string `form:"accountId,optional"`
+	Status    string `form:"status,optional"`
+}
+
+type CommentView {
+	Id           string `json:"id"`
+	MsgDataId    string `json:"msgDataId"`
+	ArticleIndex int    `json:"articleIndex"`
+	CommentId    string `json:"commentId"`
+	Content      string `json:"content"`
+	Status       string `json:"status"`
+	ReplyContent string `json:"replyContent"`
+}
+
+type CommentListResponse {
+	Items []CommentView `json:"items"`
+}
+
+type CommentActionRequest {
+	Id      string `path:"id"`
+	Action  string `json:"action"`
+	Content string `json:"content,optional"`
+}
+
+type CustomerUpdateRequest {
+	Id   string   `path:"id"`
+	Tags []string `json:"tags"`
+	Note string   `json:"note"`
+}
+
+type TicketView {
+	Id             string `json:"id"`
+	CustomerId     string `json:"customerId"`
+	ConversationId string `json:"conversationId"`
+	CommentId      string `json:"commentId"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Status         string `json:"status"`
+	Priority       string `json:"priority"`
+	AssigneeId     string `json:"assigneeId"`
+	DueAt          string `json:"dueAt"`
+}
+
+type TicketListResponse {
+	Items []TicketView `json:"items"`
+}
+
+type TicketEventView {
+	Id        string `json:"id"`
+	Type      string `json:"type"`
+	ActorId   string `json:"actorId"`
+	Payload   string `json:"payload"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type TicketEventListResponse {
+	Items []TicketEventView `json:"items"`
+}
+
+type TicketCreateRequest {
+	CustomerId     string `json:"customerId,optional"`
+	ConversationId string `json:"conversationId,optional"`
+	CommentId      string `json:"commentId,optional"`
+	Title          string `json:"title"`
+	Description    string `json:"description,optional"`
+	Priority       string `json:"priority,optional"`
+	AssigneeId     string `json:"assigneeId,optional"`
+	DueAt          string `json:"dueAt,optional"`
+}
+
+type TicketUpdateRequest {
+	Id         string `path:"id"`
+	Status     string `json:"status,optional"`
+	Priority   string `json:"priority,optional"`
+	AssigneeId string `json:"assigneeId,optional"`
+	DueAt      string `json:"dueAt,optional"`
+}
+
+type ShiftRequest {
+	AgentId string `json:"agentId,optional"`
+	TeamId  string `json:"teamId,optional"`
+	StartAt string `json:"startAt"`
+	EndAt   string `json:"endAt"`
+	State   string `json:"state,optional"`
+}
+
+type ShiftView {
+	Id      string `json:"id"`
+	AgentId string `json:"agentId"`
+	TeamId  string `json:"teamId"`
+	StartAt string `json:"startAt"`
+	EndAt   string `json:"endAt"`
+	State   string `json:"state"`
+}
+
+type ShiftListResponse {
+	Items []ShiftView `json:"items"`
+}
+
+type SyncCommentRequest {
+	AccountKey   string `json:"accountKey"`
+	MsgDataId    string `json:"msgDataId"`
+	ArticleIndex int    `json:"articleIndex,optional"`
+	Begin        int    `json:"begin,optional"`
+}
+
+type ReportResponse {
+	NewConversations            int64   `json:"newConversations"`
+	ClosedConversations         int64   `json:"closedConversations"`
+	SLAExpired                  int64   `json:"slaExpired"`
+	AverageFirstResponseSeconds float64 `json:"averageFirstResponseSeconds"`
+}
+
+type AuditView {
+	Id           string `json:"id"`
+	ActorId      string `json:"actorId"`
+	Action       string `json:"action"`
+	ResourceType string `json:"resourceType"`
+	ResourceId   string `json:"resourceId"`
+	Detail       string `json:"detail"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+type AuditListResponse {
+	Items []AuditView `json:"items"`
+}
+
+type UploadCredentialsRequest {
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+	Size        int64  `json:"size"`
+}
+
+type UploadCredentialsResponse {
+	ObjectKey string            `json:"objectKey"`
+	UploadUrl string            `json:"uploadUrl"`
+	Headers   map[string]string `json:"headers"`
+	ExpiresAt string            `json:"expiresAt"`
+}
+
+@server (
+	prefix:     /api/v1
+	group:      public
+	middleware: RequestLimits
+)
+service console-api {
+	@handler DingTalkLogin
+	post /auth/dingtalk/login (LoginRequest) returns (SessionResponse)
+
+	@handler Health
+	get /health returns (IdResponse)
+}
+
+@server (
+	prefix:     /api/v1
+	group:      workbench
+	jwt:        Auth
+	middleware: RequestLimits
+)
+service console-api {
+	@handler Me
+	get /me returns (MeResponse)
+
+	@handler Conversations
+	get /conversations (ConversationQuery) returns (ConversationListResponse)
+
+	@handler Conversation
+	get /conversations/:id (IdRequest) returns (ConversationDetail)
+
+	@handler ClaimConversation
+	post /conversations/:id/claim (IdRequest) returns (ConversationView)
+
+	@handler TransferConversation
+	post /conversations/:id/transfer (TransferRequest) returns (ConversationView)
+
+	@handler SendMessage
+	post /conversations/:id/messages (SendMessageRequest) returns (IdResponse)
+
+	@handler CloseConversation
+	post /conversations/:id/close (IdRequest) returns (ConversationView)
+
+	@handler Comments
+	get /comments (CommentQuery) returns (CommentListResponse)
+
+	@handler CommentAction
+	post /comments/:id/actions (CommentActionRequest) returns (IdResponse)
+
+	@handler SyncComments
+	post /admin/comments/sync (SyncCommentRequest) returns (IdResponse)
+
+	@handler Customer
+	get /customers/:id (IdRequest) returns (CustomerView)
+
+	@handler UpdateCustomer
+	patch /customers/:id (CustomerUpdateRequest) returns (CustomerView)
+
+	@handler CreateTicket
+	post /tickets (TicketCreateRequest) returns (IdResponse)
+
+	@handler Tickets
+	get /tickets returns (TicketListResponse)
+
+	@handler UpdateTicket
+	patch /tickets/:id (TicketUpdateRequest) returns (IdResponse)
+
+	@handler Ticket
+	get /tickets/:id (IdRequest) returns (TicketView)
+
+	@handler TicketEvents
+	get /tickets/:id/events (IdRequest) returns (TicketEventListResponse)
+
+	@handler Shifts
+	get /admin/shifts returns (ShiftListResponse)
+
+	@handler SaveShift
+	post /admin/shifts (ShiftRequest) returns (IdResponse)
+
+	@handler Reports
+	get /admin/reports returns (ReportResponse)
+
+	@handler AuditLogs
+	get /admin/audit-logs returns (AuditListResponse)
+
+	@handler UploadCredentials
+	post /media/upload-credentials (UploadCredentialsRequest) returns (UploadCredentialsResponse)
+}
+

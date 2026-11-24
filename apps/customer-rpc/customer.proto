@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package customer.v1;
+
+option go_package = "github.com/example/customer-service-platform/apps/customer-rpc/pb";
+
+message Customer {
+  string id = 1;
+  string channel = 2;
+  string app_id = 3;
+  string open_id = 4;
+  string union_id = 5;
+  string nickname = 6;
+  string note = 7;
+  repeated string tags = 8;
+}
+
+message GetCustomerRequest {
+  string id = 1;
+}
+
+message UpdateCustomerRequest {
+  string id = 1;
+  repeated string tags = 2;
+  string note = 3;
+}
+
+service CustomerService {
+  rpc GetCustomer(GetCustomerRequest) returns (Customer);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (Customer);
+}

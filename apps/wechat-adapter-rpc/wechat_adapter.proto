@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package wechatadapter.v1;
+
+option go_package = "github.com/example/customer-service-platform/apps/wechat-adapter-rpc/pb";
+
+message SendTextMessageRequest {
+  string account_key = 1;
+  string open_id = 2;
+  string text = 3;
+  string idempotency_key = 4;
+}
+
+message SendTextMessageResponse {
+  string message_id = 1;
+}
+
+service WechatAdapterService {
+  rpc SendTextMessage(SendTextMessageRequest) returns (SendTextMessageResponse);
+}

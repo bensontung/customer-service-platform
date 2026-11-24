@@ -1,0 +1,8 @@
+.env
+*.local.yaml
+*.local.yml
+coverage.out
+node_modules/
+dist/
+tmp/
+.DS_Store

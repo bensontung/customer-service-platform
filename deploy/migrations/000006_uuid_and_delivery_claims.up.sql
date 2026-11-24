@@ -1,0 +1,56 @@
+SET FOREIGN_KEY_CHECKS=0;
+
+ALTER TABLE channel_account MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE external_customer MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE agent MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE team MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE team_agent MODIFY team_id VARCHAR(36) NOT NULL;
+ALTER TABLE team_agent MODIFY agent_id VARCHAR(36) NOT NULL;
+ALTER TABLE conversation MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE conversation MODIFY channel_account_id VARCHAR(36) NOT NULL;
+ALTER TABLE conversation MODIFY customer_id VARCHAR(36) NOT NULL;
+ALTER TABLE conversation MODIFY assignee_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE conversation MODIFY team_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE message MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE message MODIFY conversation_id VARCHAR(36) NULL;
+ALTER TABLE message MODIFY channel_account_id VARCHAR(36) NOT NULL;
+ALTER TABLE outbox_event MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE outbox_event MODIFY aggregate_id VARCHAR(36) NOT NULL;
+ALTER TABLE dingtalk_delivery MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE dingtalk_delivery MODIFY conversation_id VARCHAR(36) NOT NULL;
+ALTER TABLE dingtalk_delivery MODIFY agent_id VARCHAR(36) NOT NULL;
+ALTER TABLE article_comment MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE article_comment MODIFY channel_account_id VARCHAR(36) NOT NULL;
+ALTER TABLE ticket MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE ticket MODIFY customer_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE ticket MODIFY conversation_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE ticket MODIFY comment_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE ticket MODIFY assignee_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE ticket_event MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE ticket_event MODIFY ticket_id VARCHAR(36) NOT NULL;
+ALTER TABLE ticket_event MODIFY actor_id VARCHAR(36) NOT NULL;
+ALTER TABLE audit_log MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE audit_log MODIFY actor_id VARCHAR(36) NOT NULL;
+ALTER TABLE audit_log MODIFY resource_id VARCHAR(36) NOT NULL;
+ALTER TABLE shift MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE shift MODIFY agent_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE shift MODIFY team_id VARCHAR(36) NOT NULL DEFAULT '';
+ALTER TABLE routing_rule MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE routing_rule MODIFY target_team_id VARCHAR(36) NOT NULL;
+ALTER TABLE sla_alert MODIFY id VARCHAR(36) NOT NULL;
+ALTER TABLE sla_alert MODIFY resource_id VARCHAR(36) NOT NULL;
+ALTER TABLE sla_policy MODIFY id VARCHAR(36) NOT NULL;
+
+ALTER TABLE outbox_event ADD COLUMN claimed_until DATETIME(3) NULL AFTER available_at;
+ALTER TABLE outbox_event ADD KEY idx_outbox_claim (published_at, available_at, claimed_until);
+ALTER TABLE message ADD COLUMN claimed_until DATETIME(3) NULL AFTER next_retry_at;
+ALTER TABLE message ADD KEY idx_message_claim (status, next_retry_at, claimed_until);
+
+UPDATE external_customer SET note='' WHERE note IS NULL;
+ALTER TABLE external_customer MODIFY note TEXT NOT NULL;
+UPDATE article_comment SET reply_content='' WHERE reply_content IS NULL;
+ALTER TABLE article_comment MODIFY reply_content TEXT NOT NULL;
+UPDATE ticket SET description='' WHERE description IS NULL;
+ALTER TABLE ticket MODIFY description TEXT NOT NULL;
+
+SET FOREIGN_KEY_CHECKS=1;

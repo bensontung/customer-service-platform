@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customer-service-config
+data:
+  REDIS_ADDR: redis:6379
+  CONSOLE_BASE_URL: https://console.example.com
+  OBJECT_STORAGE_ENDPOINT: https://minio.example.com
+  OBJECT_STORAGE_BUCKET: customer-service
+  WECHAT_COMMENT_SOURCES_JSON: "[]"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  WECHAT_INGRESS_LISTEN_ON: ":8081"
+  DINGTALK_CARD_TEMPLATE_ID: ""
+  DINGTALK_CALLBACK_ROUTE_KEY: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: console-api}
+  template:
+    metadata:
+      labels: {app: console-api}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: console-api
+          image: customer-service-console:replace-me
+          ports: [{containerPort: 8080}]
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /api/v1/health, port: 8080}
+          livenessProbe:
+            httpGet: {path: /api/v1/health, port: 8080}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: console-api
+spec:
+  selector: {app: console-api}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wechat-ingress-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: wechat-ingress-api}
+  template:
+    metadata:
+      labels: {app: wechat-ingress-api}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: wechat-ingress-api
+          image: customer-service-ingress:replace-me
+          ports: [{containerPort: 8081}]
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /health, port: 8081}
+          livenessProbe:
+            httpGet: {path: /health, port: 8081}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wechat-ingress-api
+spec:
+  selector: {app: wechat-ingress-api}
+  ports: [{port: 8081, targetPort: 8081}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-job
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: scheduler-job}
+  template:
+    metadata:
+      labels: {app: scheduler-job}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: scheduler-job
+          image: customer-service-scheduler:replace-me
+          ports: [{containerPort: 8082}]
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /health, port: 8082}
+          livenessProbe:
+            httpGet: {path: /health, port: 8082}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scheduler-job
+spec:
+  selector: {app: scheduler-job}
+  ports: [{port: 8082, targetPort: 8082}]

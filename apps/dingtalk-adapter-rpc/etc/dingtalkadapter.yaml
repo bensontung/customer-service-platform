@@ -1,0 +1,2 @@
+Name: dingtalkadapter.rpc
+ListenOn: ${DINGTALK_ADAPTER_RPC_LISTEN_ON}

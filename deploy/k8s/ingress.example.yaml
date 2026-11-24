@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: customer-service
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [console.example.com]
+      secretName: customer-service-tls
+  rules:
+    - host: console.example.com
+      http:
+        paths:
+          - path: /callbacks/wechat
+            pathType: Prefix
+            backend:
+              service:
+                name: wechat-ingress-api
+                port: {number: 8081}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-console
+                port: {number: 80}

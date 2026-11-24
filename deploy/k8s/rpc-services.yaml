@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conversation-rpc
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: conversation-rpc}}
+  template:
+    metadata: {labels: {app: conversation-rpc}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: conversation-rpc
+          image: customer-service-conversation-rpc:replace-me
+          ports: [{containerPort: 9101}]
+          env:
+            - {name: CONVERSATION_RPC_LISTEN_ON, value: "0.0.0.0:9101"}
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          readinessProbe: {grpc: {port: 9101}}
+          livenessProbe: {grpc: {port: 9101}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: conversation-rpc}
+spec:
+  selector: {app: conversation-rpc}
+  ports: [{port: 9101, targetPort: 9101}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-rpc
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: customer-rpc}}
+  template:
+    metadata: {labels: {app: customer-rpc}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: customer-rpc
+          image: customer-service-customer-rpc:replace-me
+          ports: [{containerPort: 9102}]
+          env:
+            - {name: CUSTOMER_RPC_LISTEN_ON, value: "0.0.0.0:9102"}
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          readinessProbe: {grpc: {port: 9102}}
+          livenessProbe: {grpc: {port: 9102}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: customer-rpc}
+spec:
+  selector: {app: customer-rpc}
+  ports: [{port: 9102, targetPort: 9102}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-rpc
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: ticket-rpc}}
+  template:
+    metadata: {labels: {app: ticket-rpc}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: ticket-rpc
+          image: customer-service-ticket-rpc:replace-me
+          ports: [{containerPort: 9103}]
+          env:
+            - {name: TICKET_RPC_LISTEN_ON, value: "0.0.0.0:9103"}
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          readinessProbe: {grpc: {port: 9103}}
+          livenessProbe: {grpc: {port: 9103}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ticket-rpc}
+spec:
+  selector: {app: ticket-rpc}
+  ports: [{port: 9103, targetPort: 9103}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wechat-adapter-rpc
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: wechat-adapter-rpc}}
+  template:
+    metadata: {labels: {app: wechat-adapter-rpc}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: wechat-adapter-rpc
+          image: customer-service-wechat-adapter-rpc:replace-me
+          ports: [{containerPort: 9104}]
+          env:
+            - {name: WECHAT_ADAPTER_RPC_LISTEN_ON, value: "0.0.0.0:9104"}
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          readinessProbe: {grpc: {port: 9104}}
+          livenessProbe: {grpc: {port: 9104}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: wechat-adapter-rpc}
+spec:
+  selector: {app: wechat-adapter-rpc}
+  ports: [{port: 9104, targetPort: 9104}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dingtalk-adapter-rpc
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: dingtalk-adapter-rpc}}
+  template:
+    metadata: {labels: {app: dingtalk-adapter-rpc}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: dingtalk-adapter-rpc
+          image: customer-service-dingtalk-adapter-rpc:replace-me
+          ports: [{containerPort: 9105}]
+          env:
+            - {name: DINGTALK_ADAPTER_RPC_LISTEN_ON, value: "0.0.0.0:9105"}
+          envFrom:
+            - configMapRef: {name: customer-service-config}
+            - secretRef: {name: customer-service-secrets}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: "1", memory: 512Mi}}
+          readinessProbe: {grpc: {port: 9105}}
+          livenessProbe: {grpc: {port: 9105}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: dingtalk-adapter-rpc}
+spec:
+  selector: {app: dingtalk-adapter-rpc}
+  ports: [{port: 9105, targetPort: 9105}]

@@ -1,0 +1,21 @@
+package public
+
+import (
+	"net/http"
+
+	"github.com/example/customer-service-platform/apps/console-api/internal/logic/public"
+	"github.com/example/customer-service-platform/apps/console-api/internal/svc"
+	"github.com/zeromicro/go-zero/rest/httpx"
+)
+
+func HealthHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := public.NewHealthLogic(r.Context(), svcCtx)
+		resp, err := l.Health()
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
